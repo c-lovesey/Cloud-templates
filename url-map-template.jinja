@@ -1,0 +1,5 @@
+resources:
+- name: http-url-map
+  type: compute.v1.urlMap
+  properties:
+    defaultService: $(ref.{{properties["defaultService"]}}.selfLink)

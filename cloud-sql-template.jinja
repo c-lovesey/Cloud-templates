@@ -1,0 +1,25 @@
+{% set deployment_name = env['name']  %}
+{% set instance_name = deployment_name + '-instance'  %}
+{% set database_name = deployment_name + '-db'  %}
+
+
+resources:
+- name: {{ instance_name }}
+  type: gcp-types/sqladmin-v1beta4:instances
+  properties:
+    region: {{ properties['region'] }}
+    settings:
+      tier: {{ properties['tier'] }}
+      backupConfiguration:
+        binaryLogEnabled: true
+        enabled: true
+
+- name: {{ database_name }}
+  type: gcp-types/sqladmin-v1beta4:databases
+  properties:
+    name: {{ database_name }}
+    instance: $(ref.{{ instance_name }}.name)
+    charset: utf8
+    networkInterfaces:
+    - network: {{ properties["network"] }}
+#creates an instance and a database on a specific network region

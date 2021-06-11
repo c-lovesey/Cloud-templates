@@ -1,0 +1,10 @@
+resources:
+- type: storage.v1.bucket
+  name: {{ env["name"] }}
+  properties:
+    kind: storage#bucket
+    location: eu
+    storageClass: MULTI_REGIONAL
+    networkInterfaces:
+    - network: {{ properties["network"] }}
+#creates the name for the bucket with all the metadata

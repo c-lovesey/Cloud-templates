@@ -1,0 +1,173 @@
+# Copyright 2016 Google Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#some links that were used 
+#https://cloud.google.com/deployment-manager/docs/configuration/templates/create-basic-template
+#https://cloud.google.com/storage/docs/json_api/v1/buckets
+#https://google.qwiklabs.com/focuses/6430?catalog_rank=%7B%22rank%22%3A1%2C%22num_filters%22%3A0%2C%22has_search%22%3Atrue%7D&parent=catalog&search_id=3683751
+#https://cloud.google.com/compute/docs/regions-zones#choosing_a_region_and_zone
+#https://www.googblogs.com/what-is-google-cloud-deployment-manager-and-how-to-use-it/
+#https://www.qwiklabs.com/focuses/1743?parent=catalog
+#https://codeblog.dotsandbrackets.com/internal-load-balancer/
+#Code reference at the bottom
+
+#Imports templates to be used
+
+imports:
+- path: bucket-template.jinja
+- path: cloud-sql-template.jinja
+- path: network-template.jinja
+- path: firewall-template.jinja
+- path: subnetwork-template.jinja
+- path: load-balancer-template.jinja
+- path: key.jinja
+- path: url-map-template.jinja
+- path: health-check-template.jinja
+- path: forwarding-rule-template.jinja
+- path: static-ip-template.jinja
+- path: target-proxy-template.jinja
+- path: backend-service-template.jinja
+- path: auto-scaler-template.jinja
+
+#Resources to be passed
+
+resources:
+
+#Bucket
+#Buckets are used as they are fast, flexible and are also scalable
+#it is also linked to the network
+
+- name: 1234567890bucket1234567890
+  type: bucket-template.jinja
+  properties:
+    network: $(ref.network.selfLink)
+#Sql database for linked storage to the network
+
+- name: sql66
+  type: cloud-sql-template.jinja
+  properties:
+    tier: db-n1-standard-1
+    region: europe-west3
+    network: $(ref.network.selfLink)
+#virtual network setup
+
+- name: network
+  type: network-template.jinja
+
+  
+- name: euw3-subnet
+  type: subnetwork-template.jinja
+  properties:
+    ipCidrRange: 10.10.1.0/24
+    network: $(ref.network.selfLink)
+    region: europe-west3
+
+- name: euw2-subnet
+  type: subnetwork-template.jinja
+  properties:
+    ipCidrRange: 10.10.2.0/24
+    network: $(ref.network.selfLink)
+    region: europe-west2
+#firewall 
+#firewall has enabled TCP and ICMP 
+#port 22 for ssh 
+#port for HTTP
+#port for remote display
+
+- name: firewall
+  type: firewall-template.jinja
+
+- name: key
+  type: key.jinja
+  
+# Instance groups to manage the loads are created for euw2 and euw3
+
+- name: instance-group-euw2
+  type: load-balancer-template.jinja
+  properties:
+    subnet: $(ref.euw2-subnet.selfLink)
+    zone: europe-west2-a
+    network: $(ref.network.selfLink)
+    targetSize: 3
+
+- name: instance-group-euw3
+  type: load-balancer-template.jinja
+  properties:
+    subnet: $(ref.euw3-subnet.selfLink)
+    zone: europe-west3-a
+    network: $(ref.network.selfLink)
+    targetSize: 3
+#Url map for direct trafic from https proxy to backend-services 
+- name: url-map
+  type: url-map-template.jinja
+  properties:
+    defaultService: backend-service
+#Health checker verifies the status of the loadbalancer and the vm's
+- name: health
+  type: health-check-template.jinja
+  
+#Static global ip necessarry for load balancing
+- name: static-ip
+  type: static-ip-template.jinja
+  
+#allows transfer from static ip to https proxy 
+- name: forwarding-rule
+  type: forwarding-rule-template.jinja
+  properties:
+    IPAddress: static-ip
+    target: elb-target-https-proxy
+#Target proxy acts as an encryption device using ssl to encrypt
+- name: target-proxy
+  type: target-proxy-template.jinja
+  properties: 
+    urlMap: url-map
+    sslCertificates: key
+#backend service directs traffic to the correct subnet
+- name: backend-service
+  type: backend-service-template.jinja
+  properties:
+    healthChecks: health
+    firstgroup: instance-group-euw2
+    secoundgroup: instance-group-euw3
+#Scales the number of virtual machine instances online
+#the max size is 15 and it is opperating within europe-west2-a which should recieve higher traffic than other zones
+
+- name: euw2-auto-scaler
+  type: auto-scaler-template.jinja
+  properties:
+    target: instance-group-euw2
+    zone: europe-west2-a
+    maxSize: 15
+#the max size is 8 and it is opperating within urope-west3-a which should recieve an average traffic level
+
+- name: euw3-auto-scaler
+  type: auto-scaler-template.jinja
+  properties:
+    target: instance-group-euw3
+    zone: europe-west3-a
+    maxSize: 8
+#Code adapted from
+#https://codeblog.dotsandbrackets.com/external-load-balancer/
+#https://cloud.google.com/deployment-manager/docs/configuration/templates/define-template-properties
+#https://github.com/GoogleCloudPlatform/cloud-foundation-toolkit/blob/master/dm/templates/cloud_sql/examples/cloud_sql.yaml
+#https://github.com/GoogleCloudPlatform/cloud-foundation-toolkit/blob/master/dm/templates/gcs_bucket/examples/gcs_bucket.yaml
+#https://github.com/GoogleCloudPlatform/deploymentmanager-samples/blob/master/examples/v2/single_vm/jinja/vm_template.jinja
+#https://github.com/GoogleCloudPlatform/deploymentmanager-samples/blob/master/examples/v2/vpn_auto_subnet/vpn-auto-subnet.jinja
+#https://cloud.google.com/deployment-manager/docs/configuration/templates/create-basic-template
+#https://github.com/GoogleCloudPlatform/deploymentmanager-samples/blob/master/examples/v2/step_by_step_guide/step6_use_multiple_templates/jinja/vm-template.jinja
+#https://cloud.google.com/compute/docs/ip-addresses/reserve-static-external-ip-address
+#https://github.com/krishan03/gcp-deployment-manager-networks-firewalls-vms
+#https://github.com/GoogleCloudPlatform/deploymentmanager-samples/tree/master/examples/v2/step_by_step_guide
+#https://github.com/krishan03/gcp-deployment-manager-networks-firewalls-vms/blob/master/config.yaml
+#https://stackoverflow.com/questions/53648159/how-to-redirect-http-to-https-using-gcp-load-balancer
+#https://github.com/GoogleCloudPlatform/deploymentmanager-samples/blob/master/examples/v2/vm_startup_script/jinja/vm_template.jinja

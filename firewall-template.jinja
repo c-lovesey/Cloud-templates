@@ -1,0 +1,23 @@
+resources:
+- name: {{ env["name"] }}
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.network.selfLink)
+    sourceRanges: ["0.0.0.0/0"]
+    allowed:
+    - IPProtocol: TCP
+      ports: ["22", "80", "3389"]
+    - IPProtocol: ICMP
+      ports: []
+- name: allow-http-healthcheck 
+  type: compute.v1.firewall
+  properties:
+    network: $(ref.network.selfLink)
+    sourceRanges:
+        - 35.191.0.0/16
+        - 130.211.0.0/22
+    allowed:
+        - IPProtocol: tcp
+          ports:
+            - 80
+#has the firewall and allows the health check to access devices

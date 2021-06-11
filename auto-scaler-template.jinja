@@ -1,0 +1,10 @@
+resources:
+  - name: {{ name }}
+    type: compute.v1.autoscaler
+    properties:
+      zone: {{ properties["zone"] }}
+      target: $(ref.{{ properties["target"] }}.selfLink)
+      autoscalingPolicy:
+        maxNumReplicas: {{ properties["maxSize"] }}
+#takes in a dynamic name so the template doesnt crash, the type is autoscaler and to make it work it needs the zone target and the autoscalingPolicy
+#properties are passed when its called and these change aswell

@@ -1,0 +1,27 @@
+resources:
+- name: keyRing
+  type: gcp-types/cloudkms-v1:projects.locations.keyRings
+  properties:
+    parent: projects/{{ env["project"] }}/locations/{{ properties["region"] }}
+    keyRingId: test-{{ properties["time"] }}-keyRing
+- name: cryptoKey
+  type: gcp-types/cloudkms-v1:projects.locations.keyRings.cryptoKeys
+  properties:
+    parent: $(ref.keyRing.name)
+    cryptoKeyId: {{ env["deployment"] }}-cryptoKey
+    purpose: ENCRYPT_DECRYPT
+    labels:
+      foo: {{ env["deployment"] }}
+  accessControl:
+    gcpIamPolicy:
+      bindings:
+      - role: roles/cloudkms.admin
+        members:
+        - "user:{{ properties["user"] }}"
+{% if properties["create_crypto_key_version"] %}
+- name: crypto-key-version
+  type: gcp-types/cloudkms-v1:projects.locations.keyRings.cryptoKeys.cryptoKeyVersions
+  properties:
+    parent: $(ref.cryptoKey.name)
+{% endif %}
+#i failed to implement the encryption successfully however this is the best template for it i feel it may be useful later on

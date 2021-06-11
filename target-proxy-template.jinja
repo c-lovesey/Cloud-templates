@@ -1,0 +1,8 @@
+resources:
+- name: https-target-proxy
+  type: compute.v1.targetHttpsProxy
+  properties:
+    sslCertificates:
+      - $(ref.key.selfLink)
+    urlMap: $(ref.http-url-map.selfLink)
+#reads the ssl certificate and applies the proxy

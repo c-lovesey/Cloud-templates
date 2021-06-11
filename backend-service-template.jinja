@@ -1,0 +1,15 @@
+resources:
+- name: {{name}}
+  type: compute.v1.backendService
+  properties:
+    backends: 
+      - name: {{ name }}-firstgroup
+        group: $(ref.{{properties["firstgroup"]}}.instanceGroup)
+      - name: {{ name }}-secoundgroup
+        group: $(ref.{{properties["secoundgroup"]}}.instanceGroup)
+    healthChecks:
+      - $(ref.{{properties["healthChecks"]}}.selfLink)
+    loadBalancingScheme: EXTERNAL
+    portName: http
+    protocol: HTTP
+#groups ips and performs healthChecks

@@ -1,0 +1,10 @@
+resources:
+- name: https-forwarding-rule
+  type: compute.v1.globalForwardingRule
+  properties:
+    IPAddress: $(ref.static-ip.selfLink)
+    IPProtocol: TCP
+    loadBalancingScheme: EXTERNAL
+    portRange: 443
+    target: $(ref.https-target-proxy.selfLink)
+#creates the template for a forwarding rule

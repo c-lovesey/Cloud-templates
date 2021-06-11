@@ -1,0 +1,38 @@
+resources:
+- name: {{name}}
+  type: compute.v1.instanceGroupManager
+  properties:
+    instanceTemplate: $(ref.{{name}}-template.selfLink)
+    namedPorts:
+    - name: http
+      port: 80
+    zone: {{ properties["zone"] }}
+    targetSize: {{ properties["targetSize"] }}
+#instance group manager creation
+
+- name: {{name}}-template
+  type: compute.v1.instanceTemplate
+  properties:
+    properties:
+      disks:
+      - autoDelete: true
+        boot: true
+        deviceName: boot
+        initializeParams:
+          sourceImage: projects/debian-cloud/global/images/family/debian-9
+        type: PERSISTENT
+      machineType: n1-standard-1
+      metadata:
+        items:
+        - key: startup-script
+          value: |
+            sudo apt-get update
+            sudo apt-get install apache2 -y
+            sudo service apache2 restart
+            echo "host:`hostname`" | sudo tee /var/www/html/index.html
+      networkInterfaces:
+        - accessConfigs:
+            - name: External NAT
+              type: ONE_TO_ONE_NAT
+          subnetwork: {{ properties["subnet"] }}
+#instance creation
